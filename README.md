@@ -238,4 +238,4 @@ npm run lint
 - [ERC721](https://eips.ethereum.org/EIPS/eip-721)
 - [Hardhat](https://hardhat.org/getting-started/)
 
-> :warning: **Disclaimer**: The code used in Chainlink Solution Accelerators comes from Chainlink community members and has not been audited. The Chainlink team disclaims and shall have no liability with respect to any loss, malfunction, or any other result of deploying a Quickstart Template. By electing to deploy a Quickstart Template you hereby acknowledge and agree to the above.
+> :warning: **Disclaimer**: This repository represents an example of using a Chainlink product or service. It is provided to to help you understand how to interact with Chainlink’s systems so that you can integrate them into your own. This template is provided "AS IS" without warranties of any kind, has not been audited, and may be missing key checks or error handling to make the usage of the product more clear. Take everything in this repository as an example and not something to be copy pasted into a production ready service.
