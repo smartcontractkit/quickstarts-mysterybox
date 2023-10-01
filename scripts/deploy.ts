@@ -16,7 +16,7 @@ const unrevealedUri = process.env.NFT_UNREVEALED_URI
 const maxSupply = process.env.NFT_MAX_SUPPLY
 const maxMintPerUser = process.env.NFT_MAX_MINT_PER_USER
 const fee = process.env.NFT_FEE
-const royaltyBps = process.env.NFT_ROYALTIY_BPS
+const royaltyBps = process.env.NFT_ROYALTY_BPS
 
 const existingSubscriptionId = process.env.VRF_SUBSCRIPTION_ID
 

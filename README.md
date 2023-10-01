@@ -69,16 +69,16 @@ Begin by setting up the parameters for the NFT contract.
 | `NFT_MAX_SUPPLY`        | The maximum number of tokens that can be minted                                                                           | `100`                 |
 | `NFT_MAX_MINT_PER_USER` | The maximum number of tokens that can be minted per user address                                                          | `10`                  |
 | `NFT_FEE`               | The fee for minting a token in ETH                                                                                        | `0.1`                 |
-| `NFT_ROYALTIY_BPS`      | The royalty fee for selling a token in basis points                                                                       | `500`                 |
+| `NFT_ROYALTY_BPS`       | The royalty fee for selling a token in basis points                                                                       | `500`                 |
 | `VRF_SUBSCRIPTION_ID`   | A funded Chainlink VRF subscription ID. If you leave this blank, a new subscription will be created and funded on deploy. | `123`                 |
 
 Next, set up the parameters for the Hardhat project.
 
-| Parameter         | Description                                                 | Example                                    |
-| ----------------- | ----------------------------------------------------------- | ------------------------------------------ |
-| `NETWORK_RPC_URL` | The RPC URL for the network you want to deploy to.          | `https://goerli.infura.io/v3/your-api-key` |
-| `PRIVATE_KEY`     | The private key of the account you want to deploy from.     | `0xabc123abc123abc123abc123abc123...`      |
-| `ETHERSCAN_API`   | The API key for Etherscan needed for contract verification. | `ABC123ABC123ABC123ABC123ABC123ABC1`       |
+| Parameter         | Description                                                                                                                                                                                          | Example                                               |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `FUJI_URL`        | The RPC URL for Avalanche Fuji testnet. You can use the default, or use your own URL. If you later decide to use Polygon Mumbai or another testnet, set the appropriate parameter from the template. | `https://avalanche-mainnet.infura.io/v3/your-api-key` |
+| `PRIVATE_KEY`     | The private key of the account you want to deploy from.                                                                                                                                              | `0xabc123abc123abc123abc123abc123...`                 |
+| `SCANNER_API_KEY` | The API key for SnowTrace used for contract verification. If you decide to deploy on Polygon Mumbai or another testnet, use that key instead.                                                        | `ABC123ABC123ABC123ABC123ABC123ABC1`                  |
 
 ## Test
 
@@ -187,7 +187,7 @@ At any time, the owner can withdraw funds from the contract by calling the `with
 
 ## Royalties
 
-This contract supports royalties for secondary sales. The royalty fee is set to `NFT_ROYALTIY_BPS` basis points and royalty receiver is set to the owner account by default. It can be changed by calling the `setRoyalty` function.
+This contract supports royalties for secondary sales. The royalty fee is set to `NFT_ROYALTY_BPS` basis points and royalty receiver is set to the owner account by default. It can be changed by calling the `setRoyalty` function.
 
 The standard for royalties is defined in the [ERC2981](https://eips.ethereum.org/EIPS/eip-2981) EIP and this contract implements it.
 
