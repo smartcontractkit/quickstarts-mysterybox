@@ -3,12 +3,17 @@
 //
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
-import { chainlink, ethers, network, run } from 'hardhat'
+import { ethers, network, run } from 'hardhat'
 import { BigNumber } from 'ethers'
 import { MerkleTree } from 'merkletreejs'
 import keccak256 from 'keccak256'
 import { networkConfig } from '../network-config'
 import whitelist from './data/whitelist.json'
+import {
+  createVRFSubscription,
+  fundSubscription,
+  addConsumerToSubscription,
+} from './vrfHelperFunctions'
 
 const name = process.env.NFT_NAME
 const symbol = process.env.NFT_SYMBOL
@@ -17,7 +22,6 @@ const maxSupply = process.env.NFT_MAX_SUPPLY
 const maxMintPerUser = process.env.NFT_MAX_MINT_PER_USER
 const fee = process.env.NFT_FEE
 const royaltyBps = process.env.NFT_ROYALTY_BPS
-
 const existingSubscriptionId = process.env.VRF_SUBSCRIPTION_ID
 
 async function main() {
@@ -45,30 +49,27 @@ async function main() {
     throw new Error('Missing network configuration!')
   }
 
-  const { vrfCoordinatorV2, keyHash, linkToken, fundAmount } =
+  const { vrfCoordinatorV2Plus, keyHash, linkToken, fundAmount } =
     networkConfig[chainId]
 
   // Create and fund a VRF subscription if existing one is not configured
   let subscriptionId: BigNumber
   if (existingSubscriptionId) {
     subscriptionId = BigNumber.from(existingSubscriptionId)
+    console.log(`Using existing VRF subscription with ID: ${subscriptionId}`)
   } else {
-    const createSubscriptionResponse = await chainlink.createVrfSubscription(
-      vrfCoordinatorV2,
-    )
-    subscriptionId = createSubscriptionResponse.subscriptionId
-    console.log('Created VRF subscription with ID', subscriptionId.toString())
-
+    // Create a new VRF subscription using the custom function
+    subscriptionId = await createVRFSubscription(vrfCoordinatorV2Plus)
+    if (!subscriptionId) {
+      throw new Error('Failed to create VRF subscription')
+    }
+    console.log(`Created VRF subscription with ID: ${subscriptionId}`)
     // Fund the newly created subscription
-    const fundAmountInJuels = BigNumber.from(fundAmount)
-    await chainlink.fundVrfSubscription(
-      vrfCoordinatorV2,
+    await fundSubscription(
+      vrfCoordinatorV2Plus,
       linkToken,
-      fundAmountInJuels,
-      subscriptionId,
-    )
-    console.log(
-      `Subscription funded with ${ethers.utils.formatEther(fundAmount)} LINK`,
+      fundAmount,
+      subscriptionId.toString(),
     )
   }
 
@@ -92,10 +93,11 @@ async function main() {
     feeInWei,
     whitelistRoot,
     royaltyBps,
-    vrfCoordinatorV2,
+    vrfCoordinatorV2Plus,
     keyHash,
     subscriptionId,
   ]
+
   const mysteryBox = await mysteryBoxFactory.deploy(...constructorArguments)
   await mysteryBox.deployed()
   console.log('MysteryBox deployed to', mysteryBox.address, network.name)
@@ -103,13 +105,13 @@ async function main() {
   // Add consumer to subscription
   // Note: The owner of the subscription must be the same as the deployer.
   // If you are using a different account, you will need comment out the following call.
-  await chainlink.addVrfConsumer(
-    vrfCoordinatorV2,
+  await addConsumerToSubscription(
+    vrfCoordinatorV2Plus,
+    subscriptionId.toString(),
     mysteryBox.address,
-    subscriptionId,
   )
   console.log(
-    'MysteryBox added as consumer to subscription with ID',
+    'MysteryBox added as consumer to subscription with ID:',
     subscriptionId.toString(),
   )
 

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.7;
+pragma solidity 0.8.19;
 
 interface MysteryBoxLike {
   function withdraw() external;
+  function acceptOwnership() external;
 }
 
 contract Nonpayable {
@@ -17,6 +18,10 @@ contract Nonpayable {
 
   function withdraw() external {
     vrfNft.withdraw();
+  }
+
+  function acceptOwnership() external {
+    vrfNft.acceptOwnership();
   }
 
   fallback() external payable {

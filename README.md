@@ -35,21 +35,23 @@ Some of the key features of this template include private minting stage with a m
 
 ## Getting Started
 
-Clone the repo and install all dependencies.
+- Clone the repo:
 
-```bash
-git clone git@github.com:hackbg/chainlink-solutions-mysterybox.git
+  ```bash
+  git clone https://github.com/smartcontractkit/quickstarts-mysterybox.git
+  ```
 
-cd chainlink-solutions-mysterybox
+- Change directories and install all dependencies:
 
-npm install
-```
+  ```bash
+  cd quickstarts-mysterybox && npm install
+  ```
 
-Alternatively, you can use [yarn](https://yarnpkg.com/) to install dependencies.
+  Alternatively, you can use [yarn](https://yarnpkg.com/) to install dependencies:
 
-```bash
-yarn install
-```
+  ```bash
+  yarn install
+  ```
 
 ## Setup
 
@@ -61,24 +63,24 @@ cp .env.example .env
 
 Begin by setting up the parameters for the NFT contract.
 
-| Parameter               | Description                                                                                                               | Example               |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| `NFT_NAME`              | The name of the NFT collection                                                                                            | `MysteryBox`          |
-| `NFT_SYMBOL`            | The symbol of the NFT collection                                                                                          | `BOX`                 |
-| `NFT_UNREVEALED_URI`    | The metadata URI for all tokens before reveal                                                                             | `https://example.com` |
-| `NFT_MAX_SUPPLY`        | The maximum number of tokens that can be minted                                                                           | `100`                 |
-| `NFT_MAX_MINT_PER_USER` | The maximum number of tokens that can be minted per user address                                                          | `10`                  |
-| `NFT_FEE`               | The fee for minting a token in ETH                                                                                        | `0.1`                 |
-| `NFT_ROYALTY_BPS`       | The royalty fee for selling a token in basis points                                                                       | `500`                 |
-| `VRF_SUBSCRIPTION_ID`   | A funded Chainlink VRF subscription ID. If you leave this blank, a new subscription will be created and funded on deploy. | `123`                 |
+| Parameter               | Description                                                                                                                   | Example                                                                         |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `NFT_NAME`              | The name of the NFT collection                                                                                                | `MysteryBox`                                                                    |
+| `NFT_SYMBOL`            | The symbol of the NFT collection                                                                                              | `BOX`                                                                           |
+| `NFT_UNREVEALED_URI`    | The metadata URI for all tokens before reveal                                                                                 | `https://example.com`                                                           |
+| `NFT_MAX_SUPPLY`        | The maximum number of tokens that can be minted                                                                               | `100`                                                                           |
+| `NFT_MAX_MINT_PER_USER` | The maximum number of tokens that can be minted per user address                                                              | `10`                                                                            |
+| `NFT_FEE`               | The fee for minting a token in ETH                                                                                            | `0.01`                                                                          |
+| `NFT_ROYALTY_BPS`       | The royalty fee for selling a token in basis points                                                                           | `500`                                                                           |
+| `VRF_SUBSCRIPTION_ID`   | A funded Chainlink VRF 2.5 subscription ID. If you leave this blank, a new subscription will be created and funded on deploy. | `79850349243438349975305816782035019118399435445660033947721688676378382535454` |
 
 Next, set up the parameters for the Hardhat project.
 
-| Parameter         | Description                                                                                                                                                                                          | Example                                               |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `FUJI_URL`        | The RPC URL for Avalanche Fuji testnet. You can use the default, or use your own URL. If you later decide to use Polygon Mumbai or another testnet, set the appropriate parameter from the template. | `https://avalanche-mainnet.infura.io/v3/your-api-key` |
-| `PRIVATE_KEY`     | The private key of the account you want to deploy from.                                                                                                                                              | `0xabc123abc123abc123abc123abc123...`                 |
-| `SCANNER_API_KEY` | The API key for SnowTrace used for contract verification. If you decide to deploy on Polygon Mumbai or another testnet, use that key instead.                                                        | `ABC123ABC123ABC123ABC123ABC123ABC1`                  |
+| Parameter         | Description                                               | Example                                    |
+| ----------------- | --------------------------------------------------------- | ------------------------------------------ |
+| `SEPOLIA_RPC_URL` | The RPC URL for Ethereum Sepolia.                         | `https://eth-sepolia.g.alchemy.com/v2/...` |
+| `PRIVATE_KEY`     | The private key of the account you want to deploy from.   | `abc123abc123abc123abc123abc123...`        |
+| `SCANNER_API_KEY` | The API key for Etherscan used for contract verification. | `ABC123ABC123ABC123ABC123ABC123ABC1`       |
 
 ## Test
 
@@ -104,27 +106,33 @@ npm run coverage
 
 Besides deploying the contract, the deploy script will also:
 
-1. Create and fund a VRF subscription if one is not provided.
-   Note: Make sure the deployer account has enough LINK to fund the subscription. The initial funding amount is configured in `network-config.js`. For testnets, you can use the [LINK faucet](https://docs.chain.link/docs/link-token-contracts/#faucets).
+1. Create and fund a 2.5 VRF subscription if one is not provided.
+   Note: Make sure the deployer account has enough LINK to fund the subscription. The initial funding amount is configured in `network-config.js`. For testnets, you can use the [LINK faucet](https://faucets.chain.link/).
 2. Add the deployed contract address as a consumer to the VRF subscription.
-   Note: If you provided a subscription ID, make sure the deployer account is the owner of the subscription. Otherwise, comment out the `addVrfConsumer` function in the deploy script and add the contract address manually.
+   Note: If you provided a subscription ID, make sure the deployer account is the owner of the subscription. Otherwise, comment out the `addConsumerToSubscription` function in the deploy script and add the contract address manually.
 3. Generate a merkle tree for the private mint.
    Note: The merkle tree is generated from the address list in `scripts/data/whitelist.json` file. Leave the file empty if you don't want to do a private mint.
 4. Verify the contract on Etherscan. If you want to skip this step, comment out the `verify` function in the deploy script.
 
-To run the deploy script, run the following command and replace `<network>` with the network you want to deploy to.
+To run the deploy script, run the following command and replace `<network>` with the network you want to deploy to (as defined in `network-config.ts`).
 
 ```bash
-npx hardhat run scripts/deploy.js --network <network>
+npx hardhat run scripts/deploy.ts --network <network>
 ```
 
-Note: The network must be configured in `hardhat.config.js`.
+E.g. for Ethereum Sepolia:
+
+```bash
+npx hardhat run scripts/deploy.ts --network ethereumSepolia
+```
+
+Note: The network must also be configured in `hardhat.config.ts`.
 
 ## Private Mint
 
 The contract is by default in private mode after deployment. This means that only whitelisted addresses can mint tokens. The list of whitelisted addresses is stored in a merkle tree. The merkle tree is generated from the address list in `scripts/data/whitelist.json` file.
 
-If you don't want to do a private mint, leave the file empty and enable public minting by calling the `setPublicMint` function with `true` as the parameter.
+If you don't want to do a private mint, enable public minting by calling the `setPublicMint` function with `true` as the parameter.
 
 Minting tokens in private mode is done by calling the `privateMint` function. The function takes the following parameters:
 
@@ -161,7 +169,7 @@ The metadata for each token is stored in a JSON file and must be hosted somewher
   - [AWS S3](https://aws.amazon.com/s3/)
   - [Google Cloud Storage](https://cloud.google.com/storage)
 
-Alternatiely, you can build a metadata server that serves the metadata for each token. Here's an example of a [metadata server](https://github.com/ProjectOpenSea/metadata-api-nodejs) built by OpenSea.
+Alternatively, you can build a metadata server that serves the metadata for each token. Here's an example of a [metadata server](https://github.com/ProjectOpenSea/metadata-api-nodejs) built by OpenSea.
 
 ## Provenance
 
@@ -232,10 +240,10 @@ npm run lint
 
 ## References
 
-- [Chainlink VRF](https://docs.chain.link/docs/chainlink-vrf)
+- [Chainlink VRF](https://docs.chain.link/vrf)
 - [OpenZeppelin](https://docs.openzeppelin.com/contracts/4.x/)
 - [ERC721Psi](https://github.com/estarriolvetch/ERC721Psi)
 - [ERC721](https://eips.ethereum.org/EIPS/eip-721)
-- [Hardhat](https://hardhat.org/getting-started/)
+- [Hardhat](https://hardhat.org/hardhat-runner/docs/getting-started)
 
-> :warning: **Disclaimer**: This tutorial represents an educational example to use a Chainlink system, product, or service and is provided to demonstrate how to interact with Chainlink’s systems, products, and services to integrate them into your own. This template is provided “AS IS” and “AS AVAILABLE” without warranties of any kind, it has not been audited, and it may be missing key checks or error handling to make the usage of the system, product or service more clear. Do not use the code in this example in a production environment without completing your own audits and application of best practices. Neither Chainlink Labs, the Chainlink Foundation, nor Chainlink node operators are responsible for unintended outputs that are generated due to errors in code. 
+> :warning: **Disclaimer**: This tutorial represents an educational example to use a Chainlink system, product, or service and is provided to demonstrate how to interact with Chainlink’s systems, products, and services to integrate them into your own. This template is provided “AS IS” and “AS AVAILABLE” without warranties of any kind, it has not been audited, and it may be missing key checks or error handling to make the usage of the system, product or service more clear. Do not use the code in this example in a production environment without completing your own audits and application of best practices. Neither Chainlink Labs, the Chainlink Foundation, nor Chainlink node operators are responsible for unintended outputs that are generated due to errors in code.
