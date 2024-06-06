@@ -7,11 +7,11 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import {
   MysteryBox,
   FPEMapMock,
-  VRFCoordinatorV2Mock,
+  VRFCoordinatorV2PlusMock,
   MysteryBox__factory as MysteryBoxFactory,
   FPEMapMock__factory as FPEMapMockFactory,
   Nonpayable__factory as NonpayableFactory,
-  VRFCoordinatorV2Mock__factory as VRFCoordinatorV2MockFactory,
+  VRFCoordinatorV2PlusMock__factory as VRFCoordinatorV2PlusMockFactory,
 } from '../typechain-types'
 
 const { AddressZero, HashZero } = ethers.constants
@@ -19,7 +19,7 @@ const { parseEther } = ethers.utils
 const { createRandom } = ethers.Wallet
 
 let mysteryBoxFactory: MysteryBoxFactory
-let vrfCoordinatorV2MockFactory: VRFCoordinatorV2MockFactory
+let vrfCoordinatorV2PlusMockFactory: VRFCoordinatorV2PlusMockFactory
 let fpeMapMockFactory: FPEMapMockFactory
 let nonPayableFactory: NonpayableFactory
 
@@ -27,9 +27,9 @@ before(async function () {
   mysteryBoxFactory = (await ethers.getContractFactory(
     'MysteryBox',
   )) as MysteryBoxFactory
-  vrfCoordinatorV2MockFactory = (await ethers.getContractFactory(
-    'VRFCoordinatorV2Mock',
-  )) as VRFCoordinatorV2MockFactory
+  vrfCoordinatorV2PlusMockFactory = (await ethers.getContractFactory(
+    'VRFCoordinatorV2PlusMock',
+  )) as VRFCoordinatorV2PlusMockFactory
   fpeMapMockFactory = (await ethers.getContractFactory(
     'FPEMapMock',
   )) as FPEMapMockFactory
@@ -43,7 +43,7 @@ describe('MysteryBox', function () {
   const symbol = 'SYMBOL'
   const unrevealedUri = 'https://unrevealed.com'
   const extension = '.json'
-  const fee = parseEther('0.1')
+  const fee = parseEther('0.01')
   const maxSupply = 10
   const maxMintPerUser = 10
   const royaltyBps = 100
@@ -55,7 +55,7 @@ describe('MysteryBox', function () {
   const keyHash = HashZero
 
   let mysteryBox: MysteryBox
-  let vrfCoordinatorV2Mock: VRFCoordinatorV2Mock
+  let vrfCoordinatorV2PlusMock: VRFCoordinatorV2PlusMock
 
   let merkleTree: MerkleTree
 
@@ -79,12 +79,12 @@ describe('MysteryBox', function () {
   })
 
   beforeEach(async function () {
-    vrfCoordinatorV2Mock = (await vrfCoordinatorV2MockFactory.deploy(
+    vrfCoordinatorV2PlusMock = (await vrfCoordinatorV2PlusMockFactory.deploy(
       baseFee,
       gasPriceLink,
-    )) as VRFCoordinatorV2Mock
-    await vrfCoordinatorV2Mock.createSubscription()
-    await vrfCoordinatorV2Mock.fundSubscription(
+    )) as VRFCoordinatorV2PlusMock
+    await vrfCoordinatorV2PlusMock.createSubscription()
+    await vrfCoordinatorV2PlusMock.fundSubscription(
       subscriptionId,
       subscriptionFundAmount,
     )
@@ -97,19 +97,22 @@ describe('MysteryBox', function () {
       fee,
       merkleTree.getHexRoot(),
       royaltyBps,
-      vrfCoordinatorV2Mock.address,
+      vrfCoordinatorV2PlusMock.address,
       keyHash,
       subscriptionId,
     )) as MysteryBox
     await mysteryBox.setPublicMint(true)
-    await vrfCoordinatorV2Mock.addConsumer(subscriptionId, mysteryBox.address)
+    await vrfCoordinatorV2PlusMock.addConsumer(
+      subscriptionId,
+      mysteryBox.address,
+    )
   })
 
   describe('Mint', function () {
     it('should revert if amount is 0', async function () {
       await expect(
         mysteryBox.connect(regularUser).publicMint(0),
-      ).to.be.revertedWithCustomError(mysteryBox, 'ZeroAmount')
+      ).to.be.revertedWithCustomError(mysteryBox, 'MysteryBox__ZeroAmount')
     })
 
     it('should revert if funds are insufficient', async function () {
@@ -117,7 +120,10 @@ describe('MysteryBox', function () {
         mysteryBox.connect(regularUser).publicMint(2, {
           value: fee,
         }),
-      ).to.be.revertedWithCustomError(mysteryBox, 'InsufficientValue')
+      ).to.be.revertedWithCustomError(
+        mysteryBox,
+        'MysteryBox__InsufficientValue',
+      )
     })
 
     it('should revert if max mint per user reached', async function () {
@@ -126,7 +132,10 @@ describe('MysteryBox', function () {
         mysteryBox.publicMint(exceedingAmount, {
           value: fee.mul(exceedingAmount),
         }),
-      ).to.be.revertedWithCustomError(mysteryBox, 'LimitPerUserExceeded')
+      ).to.be.revertedWithCustomError(
+        mysteryBox,
+        'MysteryBox__LimitPerUserExceeded',
+      )
     })
 
     it('should revert if cap reached', async function () {
@@ -137,7 +146,10 @@ describe('MysteryBox', function () {
         mysteryBox.connect(regularUser).publicMint(1, {
           value: fee,
         }),
-      ).to.be.revertedWith('Exceed maximum supply!')
+      ).to.be.revertedWithCustomError(
+        mysteryBox,
+        'ERC721Psi__ExceedMaximumSupply',
+      )
     })
 
     it('should transfer requested amount of tokens', async function () {
@@ -161,7 +173,7 @@ describe('MysteryBox', function () {
         mysteryBox.connect(whitelistedUser).privateMint(1, proof, {
           value: fee,
         }),
-      ).to.be.revertedWithCustomError(mysteryBox, 'NotEligible')
+      ).to.be.revertedWithCustomError(mysteryBox, 'MysteryBox__NotEligible')
     })
 
     it('should revert if non-whitelisted users tries to mint', async function () {
@@ -170,7 +182,7 @@ describe('MysteryBox', function () {
         mysteryBox.connect(nonWhitelistedUser).privateMint(1, proof, {
           value: fee,
         }),
-      ).to.be.revertedWithCustomError(mysteryBox, 'NotEligible')
+      ).to.be.revertedWithCustomError(mysteryBox, 'MysteryBox__NotEligible')
     })
 
     it('should allow whitelisted users to mint', async function () {
@@ -192,7 +204,7 @@ describe('MysteryBox', function () {
         mysteryBox.publicMint(1, {
           value: fee,
         }),
-      ).to.be.revertedWithCustomError(mysteryBox, 'NotAllowed')
+      ).to.be.revertedWithCustomError(mysteryBox, 'MysteryBox__NotAllowed')
     })
 
     it('should allow anyone to mint', async function () {
@@ -235,7 +247,7 @@ describe('MysteryBox', function () {
       const revealReceipt = await reveal.wait()
       const vrfRequestId = revealReceipt.events?.[1].args?.requestId
 
-      const fulfilledTx = await vrfCoordinatorV2Mock.fulfillRandomWords(
+      const fulfilledTx = await vrfCoordinatorV2PlusMock.fulfillRandomWords(
         vrfRequestId,
         mysteryBox.address,
       )
@@ -248,7 +260,7 @@ describe('MysteryBox', function () {
         mysteryBox.connect(regularUser).publicMint(1, {
           value: fee,
         }),
-      ).to.be.revertedWithCustomError(mysteryBox, 'NotAllowed')
+      ).to.be.revertedWithCustomError(mysteryBox, 'MysteryBox__NotAllowed')
     })
 
     it('should revert if requested token does not exist', async function () {
@@ -282,20 +294,22 @@ describe('MysteryBox', function () {
     it('should revert if regular user tries to withdraw funds', async function () {
       await expect(
         mysteryBox.connect(nonWhitelistedUser).withdraw(),
-      ).to.be.revertedWith('Ownable: caller is not the owner')
+      ).to.be.revertedWith('Only callable by owner')
     })
 
     it('should revert when transfer call fails', async function () {
       const nonpayableNft = await nonPayableFactory.deploy(mysteryBox.address)
       await mysteryBox.transferOwnership(nonpayableNft.address)
+      await nonpayableNft.acceptOwnership()
+      expect(await mysteryBox.owner()).to.equal(nonpayableNft.address)
       await mysteryBox.connect(nonWhitelistedUser).publicMint(1, { value: fee })
       await expect(nonpayableNft.withdraw()).to.be.revertedWithCustomError(
         mysteryBox,
-        'FailedToWithdrawFunds',
+        'MysteryBox__FailedToWithdrawFunds',
       )
     })
 
-    it('should trasnfer funds to owner address', async function () {
+    it('should transfer funds to owner address', async function () {
       await mysteryBox.connect(nonWhitelistedUser).publicMint(1, {
         value: fee,
       })

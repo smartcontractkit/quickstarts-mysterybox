@@ -1,21 +1,22 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.7;
+pragma solidity 0.8.19;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
-import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
+
+import {IVRFCoordinatorV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
+import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
 import {ERC721Psi, ERC721PsiMysteryBox} from "./ERC721Psi/ERC721PsiMysteryBox.sol";
 
 /// @title MysteryBox
 /// @author HackBG Team (https://hack.bg)
+/// @author Updated for VRF2.5 by the Chainlink team
 /// @notice NFT collection with random token distribution
 /// @dev Using Chainlink VRF for randomness
-contract MysteryBox is ERC721PsiMysteryBox, ERC2981, Ownable {
+contract MysteryBox is ERC721PsiMysteryBox, ERC2981 {
   /*//////////////////////////////////////////////////////////////
                                  DATA
-  //////////////////////////////////////////////////////////////*/
+    //////////////////////////////////////////////////////////////*/
 
   /// @notice The maximum amount of tokens that can be minted
   uint256 private immutable i_maxSupply;
@@ -27,14 +28,14 @@ contract MysteryBox is ERC721PsiMysteryBox, ERC2981, Ownable {
   bytes32 private immutable i_vrfKeyHash;
 
   /// @notice The address of Chainlink VRF Coordinator
-  address private immutable i_vrfCoordinatorV2;
+  address private immutable i_vrfCoordinatorV2Plus;
 
   /// @notice The subscription ID for Chainlink VRF
-  uint64 private immutable i_vrfSubscriptionId;
+  uint256 private immutable i_vrfSubscriptionId;
 
   /*//////////////////////////////////////////////////////////////
                                  STATE
-  //////////////////////////////////////////////////////////////*/
+    //////////////////////////////////////////////////////////////*/
 
   /// @notice The fee for minting one token
   uint256 private s_fee;
@@ -59,33 +60,33 @@ contract MysteryBox is ERC721PsiMysteryBox, ERC2981, Ownable {
 
   /*//////////////////////////////////////////////////////////////
                                 ERRORS
-  //////////////////////////////////////////////////////////////*/
+    //////////////////////////////////////////////////////////////*/
 
   /// @notice The user is not allowed to mint
-  error NotAllowed();
+  error MysteryBox__NotAllowed();
 
   /// @notice The user is not eligible for private mint
-  error NotEligible();
+  error MysteryBox__NotEligible();
 
   /// @notice The amount requested for mint is zero
-  error ZeroAmount();
+  error MysteryBox__ZeroAmount();
 
   /// @notice The value sent is insufficient for the mint
-  error InsufficientValue();
+  error MysteryBox__InsufficientValue();
 
   /// @notice The user has exceeded the limit of tokens per address
-  error LimitPerUserExceeded();
+  error MysteryBox__LimitPerUserExceeded();
 
   /// @notice The funds could not be withdrawn
-  error FailedToWithdrawFunds();
+  error MysteryBox__FailedToWithdrawFunds();
 
   /*//////////////////////////////////////////////////////////////
                               CONSTRUCTOR
-  //////////////////////////////////////////////////////////////*/
+    //////////////////////////////////////////////////////////////*/
 
   /// @notice Deploys a new MysteryBox contract with the specified parameters
   /// @dev Sets the contract owner and royalty receiver to the deployer
-  /// @dev For Chainlink VRF parameters, see https://docs.chain.link/docs/vrf-contracts/
+  /// @dev For Chainlink VRF parameters, see https://docs.chain.link/vrf/v2-5/overview/subscription
   /// @param name The name of the collection
   /// @param symbol The symbol of the collection
   /// @param unrevealedURI The URI for all tokens before reveal
@@ -94,7 +95,7 @@ contract MysteryBox is ERC721PsiMysteryBox, ERC2981, Ownable {
   /// @param fee The fee for minting one token in wei
   /// @param whitelistRoot The root of the whitelist merkle tree
   /// @param royaltyBps The royalty percentage in basis points
-  /// @param vrfCoordinatorV2 The address of Chainlink VRF Coordinator V2
+  /// @param vrfCoordinatorV2Plus The address of Chainlink VRF Coordinator V2Plus
   /// @param vrfKeyhash The keyhash for Chainlink VRF
   /// @param vrfSubscriptionId The subscription ID for Chainlink VRF
   constructor(
@@ -106,14 +107,14 @@ contract MysteryBox is ERC721PsiMysteryBox, ERC2981, Ownable {
     uint256 fee,
     bytes32 whitelistRoot,
     uint96 royaltyBps,
-    address vrfCoordinatorV2,
+    address vrfCoordinatorV2Plus,
     bytes32 vrfKeyhash,
-    uint64 vrfSubscriptionId
-  ) ERC721PsiMysteryBox(vrfCoordinatorV2) ERC721Psi(name, symbol) {
+    uint256 vrfSubscriptionId
+  ) ERC721PsiMysteryBox(vrfCoordinatorV2Plus) ERC721Psi(name, symbol) {
     i_maxSupply = maxSupply;
     i_maxMintPerUser = maxMintPerUser;
     i_vrfKeyHash = vrfKeyhash;
-    i_vrfCoordinatorV2 = vrfCoordinatorV2;
+    i_vrfCoordinatorV2Plus = vrfCoordinatorV2Plus;
     i_vrfSubscriptionId = vrfSubscriptionId;
     s_fee = fee;
     s_whitelistRoot = whitelistRoot;
@@ -124,12 +125,12 @@ contract MysteryBox is ERC721PsiMysteryBox, ERC2981, Ownable {
 
   /*//////////////////////////////////////////////////////////////
                            MINT FUNCTIONS
-  //////////////////////////////////////////////////////////////*/
+    //////////////////////////////////////////////////////////////*/
 
   /// @notice Mint a specified amount of tokens during the public mint
   /// @param amount The amount of tokens to mint
   function publicMint(uint256 amount) external payable {
-    if (!s_publicMint) revert NotAllowed();
+    if (!s_publicMint) revert MysteryBox__NotAllowed();
 
     _mintAmount(amount);
   }
@@ -142,25 +143,25 @@ contract MysteryBox is ERC721PsiMysteryBox, ERC2981, Ownable {
   function privateMint(uint256 amount, bytes32[] calldata proof) external payable {
     bytes32 leaf = keccak256(abi.encodePacked(msg.sender));
 
-    if (!MerkleProof.verify(proof, s_whitelistRoot, leaf)) revert NotEligible();
+    if (!MerkleProof.verify(proof, s_whitelistRoot, leaf)) revert MysteryBox__NotEligible();
 
     _mintAmount(amount);
   }
 
   /*//////////////////////////////////////////////////////////////
                               INTERNAL
-  //////////////////////////////////////////////////////////////*/
+    //////////////////////////////////////////////////////////////*/
 
   /// @dev A function used internally to mint a specified amount of tokens
   /// @param amount The amount of tokens to mint
   function _mintAmount(uint256 amount) internal {
-    if (_revealed()) revert NotAllowed();
+    if (_revealed()) revert MysteryBox__NotAllowed();
 
-    if (amount == 0) revert ZeroAmount();
+    if (amount == 0) revert MysteryBox__ZeroAmount();
 
-    if (msg.value < s_fee * amount) revert InsufficientValue();
+    if (msg.value < s_fee * amount) revert MysteryBox__InsufficientValue();
 
-    if (s_userAmountMinted[msg.sender] + amount > i_maxMintPerUser) revert LimitPerUserExceeded();
+    if (s_userAmountMinted[msg.sender] + amount > i_maxMintPerUser) revert MysteryBox__LimitPerUserExceeded();
 
     s_userAmountMinted[msg.sender] += amount;
 
@@ -169,7 +170,7 @@ contract MysteryBox is ERC721PsiMysteryBox, ERC2981, Ownable {
 
   /*//////////////////////////////////////////////////////////////
                            PUBLIC GETTERS
-  //////////////////////////////////////////////////////////////*/
+    //////////////////////////////////////////////////////////////*/
 
   /// @notice Get the fee for minting one token
   /// @return The fee for minting one token in wei
@@ -197,7 +198,7 @@ contract MysteryBox is ERC721PsiMysteryBox, ERC2981, Ownable {
 
   /*//////////////////////////////////////////////////////////////
                           OWNER FUNCTIONS
-  //////////////////////////////////////////////////////////////*/
+    //////////////////////////////////////////////////////////////*/
 
   /// @notice Reveal the collection
   /// @dev This action is irreversible
@@ -254,12 +255,12 @@ contract MysteryBox is ERC721PsiMysteryBox, ERC2981, Ownable {
     // solhint-disable-next-line avoid-low-level-calls
     (bool sent, ) = payable(owner()).call{value: address(this).balance}("");
 
-    if (!sent) revert FailedToWithdrawFunds();
+    if (!sent) revert MysteryBox__FailedToWithdrawFunds();
   }
 
   /*//////////////////////////////////////////////////////////////
                      ERC721PsiMysteryBox LOGIC
-  //////////////////////////////////////////////////////////////*/
+    //////////////////////////////////////////////////////////////*/
 
   /// @inheritdoc ERC721Psi
   function _baseURI() internal view override returns (string memory) {
@@ -278,7 +279,7 @@ contract MysteryBox is ERC721PsiMysteryBox, ERC2981, Ownable {
 
   /// @inheritdoc ERC721PsiMysteryBox
   function _coordinator() internal view override returns (address) {
-    return i_vrfCoordinatorV2;
+    return i_vrfCoordinatorV2Plus;
   }
 
   /// @inheritdoc ERC721PsiMysteryBox
@@ -287,13 +288,13 @@ contract MysteryBox is ERC721PsiMysteryBox, ERC2981, Ownable {
   }
 
   /// @inheritdoc ERC721PsiMysteryBox
-  function _subscriptionId() internal view override returns (uint64) {
+  function _subscriptionId() internal view override returns (uint256) {
     return i_vrfSubscriptionId;
   }
 
   /*//////////////////////////////////////////////////////////////
                            ERC 165 LOGIC
-  //////////////////////////////////////////////////////////////*/
+    //////////////////////////////////////////////////////////////*/
 
   function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721Psi, ERC2981) returns (bool) {
     return super.supportsInterface(interfaceId);
