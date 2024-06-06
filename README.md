@@ -145,7 +145,8 @@ To enable public minting, call the `setPublicMint` function with `true` as the p
 
 Minting tokens in public mode is done by calling the `publicMint` function. The function takes the following parameters:
 
-- `amount` The amount of tokens to mint.
+- `publicMint`: The payable amount in ETH (per token).
+- `amount`: The amount of tokens to mint.
 
 Each address can only mint a maximum of `NFT_MAX_MINT_PER_USER` tokens.
 

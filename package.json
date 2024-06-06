@@ -10,7 +10,7 @@
     "coverage": "hardhat coverage"
   },
   "devDependencies": {
-    "@chainlink/contracts": "1.1.1-beta.0",
+    "@chainlink/contracts": "1.1.1",
     "@nomicfoundation/hardhat-toolbox": "^2.0.2",
     "@openzeppelin/contracts": "^4.9.6",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
